@@ -2,7 +2,7 @@ from typing import Collection
 from model import Post
 import motor.motor_asyncio  # mongo db driver
 
-client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017')
+client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017/')
 db = client.PostList
 # collection = db.post
 usersCollection = db.users
@@ -10,6 +10,13 @@ pollsCollection = db.polls
 orgsCollection = db.orgs
 
 # MAIN FUNCTIONALITY
+async def new_user(user):
+    person = user
+    result = await usersCollection.insert_one(person)
+
+
+
+
 async def fetch_post(title):
     document = await collection.find_one({'title':title})
     return document

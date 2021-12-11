@@ -15,6 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+"""
 @app.get("/")
 def read_root():
     return {'Ping: Pong'}
@@ -24,10 +25,6 @@ def read_root():
 async def get_post():
     response = await fetch_all()
     return response
-
-
-
-
 
 @app.get("/api/post{title}", response_model=Post)
 async def get_post_by_id(title):
@@ -59,13 +56,13 @@ async def delete_post(title):
     if response:
         return 'success'
     raise HTTPException(404, f'there is no Post item with this (id) to delete')
-    
+"""    
 
 
 # User management
 @app.post("/users/add")
-async def add_user(name, email, pw, orgs, polls):
-    return True
+async def add_user(name, email, pw):
+    response = await new_user(name, email, pw)
 
 @app.delete("/users/delete/{id}/")
 async def delete_user(id):
@@ -79,15 +76,17 @@ async def update_user_email(id, new_email):
 @app.put("/users/name/{new_name}/")
 async def update_user_name(id, new_name):
     return True
+
+@app.put("/users/name/{new_password}/")
+async def update_user_password(id, new_password):
+    return True
+
+
+@app.get("/users/name/{id}/")
+async def get_user_by_id(id):
+    return True
+
 """
-
-UPDATE /users/name/{new_name}/ = same as above 
-
-UPDATE /users/password/{new_password}/ = same as above 
-
-GET /users/{id} = gets the user 
-
- 
 
 POST /polls/add = adds a poll 
 
