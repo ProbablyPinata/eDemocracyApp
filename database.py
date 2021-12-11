@@ -4,8 +4,10 @@ import motor.motor_asyncio  # mongo db driver
 
 client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017')
 db = client.PostList
-collection = db.post
-
+# collection = db.post
+usersCollection = db.users
+pollsCollection = db.polls
+orgsCollection = db.orgs
 
 # MAIN FUNCTIONALITY
 async def fetch_post(title):
@@ -26,4 +28,10 @@ async def create_post(post):
     return document
 
 async def update_post(title, description):
-   await collection.update_one() 
+   await collection.update_one({'title':title}, {'$set':{'description':description}}) 
+   document = await collection.find_one({'title':title})
+   return document
+
+async def delete_post(title):
+    await collection.delete_one({'title':title})
+    return True
