@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from database import *
-
+from crud import *
+from schemas import User, Poll, Organisation
+from sqlalchemy.orm import Session
 app = FastAPI()
 
 
@@ -14,6 +16,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+models.Base.metadata.drop_all(engine)
+models.Base.metadata.create_all(bind=engine)
+
+def validate(response):
+    if response:
+        return response
+    return HTTPException(400, 'something went wrong.')
 
 """
 @app.get("/")
@@ -60,9 +77,78 @@ async def delete_post(title):
 
 
 # User management
-@app.post("/users/add")
-async def add_user(name, email, pw):
-    response = await new_user(name, email, pw)
+@app.get("/users/name/{id}/", response_model=User)
+async def get_user_by_id(db, user_id):
+    response = get_user(db, user_id)
+    return validate(response)
+
+@app.get("/users/", response_model=User)
+async def get_all_users(db):
+    response = get_users(db)
+    return validate(response)
+
+@app.post("/users/add", response_model=User)
+async def new_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    response = create_user(db, user)
+    return validate(response)
+
+# Poll management
+
+@app.post("/polls/add", response_model=User)
+async def new_poll(poll: schemas.PollCreate, db: Session = Depends(get_db)):
+    response = create_poll(db, poll)
+    return validate(response)
+
+@app.post("/poll/{id}", response_model=User)
+async def get_poll_by_id(poll_id: int, db: Session = Depends(get_db)):
+    response = get_poll(db)
+    return validate(response)
+
+@app.post("/polls/get/all", response_model=User)
+async def get_all_polls(db: Session = Depends(get_db)):
+    response = get_polls(db)
+    return validate(response)
+
+@app.post("/polls/", response_model=User)
+async def yourmum(db: Session = Depends(get_db)):
+    response = get_polls(db)
+    return validate(response)
+
+
+"""""""""
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(db=db, user=user)
+
+
+@app.get("/users/", response_model=List[schemas.User])
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = crud.get_users(db, skip=skip, limit=limit)
+    return users
+
+
+@app.get("/users/{user_id}", response_model=schemas.User)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+@app.post("/users/{user_id}/items/", response_model=schemas.Item)
+def create_item_for_user(
+    user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
+):
+    return crud.create_user_item(db=db, item=item, user_id=user_id)
+
+
+@app.get("/items/", response_model=List[schemas.Item])
+def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    items = crud.get_items(db, skip=skip, limit=limit)
+    return items
 
 @app.delete("/users/delete/{id}/")
 async def delete_user(id):
@@ -80,50 +166,4 @@ async def update_user_name(id, new_name):
 @app.put("/users/name/{new_password}/")
 async def update_user_password(id, new_password):
     return True
-
-
-@app.get("/users/name/{id}/")
-async def get_user_by_id(id):
-    return True
-
-# POST managenent
-@app.get("/polls/add")
-async def add_poll(id):
-    return True
-
-@app.get("/polls/delete/{id}/{user_id}")
-async def delete_poll(id):
-    return True
-
-
 """
-
-POST /polls/add = adds a poll 
-
-DELETE /polls/delete/{id}/{user_id} = only an admin can delete a poll. Deletes polls from others' history 
-
-UPDATE /polls/name/{new_name}/ = and for description and any other fields that seem fitting 
-
-POST /polls/add_vote/{user_id}/{choice_id}/ = votes for a person. Ensures person is in the organisation of the poll 
-
-UPDATE /polls/change_vote/{user_id}/{new_choice} = changes a users' vote 
-
-GET /polls/{id} = gets the poll 
-
- 
-
-POST /org/add/{creator_id} = we need a user to create an orgnaisation, and so that user will automatically be made an admin 
-
-DELETE /org/delete/{id} = deletes organisation and related polls 
-
-POST /org/add_admin/{id} = adds an admin 
-
-DELETE /org/del_admin/{id} = removes an admin. If one admin remains this fails 
-
-UPDATE /org/name/{new_name} = changes name 
-
-UPDATE /org/description/{new_desc} 
-
-DELETE /org/delete/{id}/{user_id} = only admin can delete organisation. Deletes the orgnaisation 
-
-POST /org/invite/{email} = invites user with email. Adds the user but we may do an email invitation """

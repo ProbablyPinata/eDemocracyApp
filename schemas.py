@@ -6,7 +6,7 @@ class UserBase(BaseModel):
     name: str
     email: str
     pw: str
-    organisations: list
+    organisations: List[int]
 
 class UserCreate(UserBase):
     pass

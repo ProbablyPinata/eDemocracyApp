@@ -1,7 +1,6 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
 from sqlalchemy.orm import descriptor_props, relationship
-from .database import Base
-from pydantic import BaseModel
+from database import Base
 
 # can you see this? yes
 # nice
@@ -29,7 +28,7 @@ class Poll(Base):
     total_votes = Column(Integer)
     start_time = Column(DateTime)
     end_time = Column(DateTime)
-    organisation_id = Column(Integer, ForeignKey("organisation.id"))
+    organisation_id = Column(Integer, ForeignKey("organisations.id"))
     results = Column(String) # [{choice: id, votes: int}]
     choices = Column(String) # [{description: int, id: int}]
 
