@@ -86,6 +86,16 @@ async def update_user_password(id, new_password):
 async def get_user_by_id(id):
     return True
 
+# POST managenent
+@app.get("/polls/add")
+async def add_poll(id):
+    return True
+
+@app.get("/polls/delete/{id}/{user_id}")
+async def delete_poll(id):
+    return True
+
+
 """
 
 POST /polls/add = adds a poll 
