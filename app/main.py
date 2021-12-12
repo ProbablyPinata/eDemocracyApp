@@ -1,12 +1,10 @@
 from typing import List
-
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from database import *
-from crud import *
-from schemas import User, Poll, Organisation
+from .database import *
+from .crud import *
+from .schemas import User, Poll, Organisation
 from sqlalchemy.orm import Session
-from typing import List
 app = FastAPI()
 
 
@@ -97,7 +95,7 @@ async def new_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return validate(response)
 
 @app.delete("/users/delete/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def app_delete_user(user_id: int, db: Session = Depends(get_db)):
     if not delete_user(user_id, db):
         raise HTTPException(400, "Unable to delete user")
 
