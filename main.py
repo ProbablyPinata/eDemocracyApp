@@ -4,6 +4,7 @@ from database import *
 from crud import *
 from schemas import User, Poll, Organisation
 from sqlalchemy.orm import Session
+from typing import List
 app = FastAPI()
 
 
@@ -30,7 +31,7 @@ models.Base.metadata.create_all(bind=engine)
 def validate(response):
     if response:
         return response
-    return HTTPException(400, 'something went wrong.')
+    raise HTTPException(400, 'something went wrong.')
 
 """
 @app.get("/")
@@ -77,13 +78,14 @@ async def delete_post(title):
 
 
 # User management
-@app.get("/users/name/{id}/", response_model=User)
-async def get_user_by_id(db, user_id):
+@app.get("/users/name/{user_id}", response_model=User)
+async def get_user_by_id(user_id, db: Session = Depends(get_db)):
     response = get_user(db, user_id)
+    print(response)
     return validate(response)
 
-@app.get("/users/", response_model=User)
-async def get_all_users(db):
+@app.get("/users/", response_model=List[User])
+async def get_all_users(db: Session  = Depends(get_db)):
     response = get_users(db)
     return validate(response)
 
@@ -92,28 +94,43 @@ async def new_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     response = create_user(db, user)
     return validate(response)
 
+@app.delete("/users/delete/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    if not delete_user(user_id, db):
+        raise HTTPException(400, "Unable to delete user")
+
 # Poll management
 
-@app.post("/polls/add", response_model=User)
+@app.post("/polls/add", response_model=Poll)
 async def new_poll(poll: schemas.PollCreate, db: Session = Depends(get_db)):
     response = create_poll(db, poll)
     return validate(response)
 
-@app.post("/poll/{id}", response_model=User)
+@app.post("/poll/{poll_id}", response_model=Poll)
 async def get_poll_by_id(poll_id: int, db: Session = Depends(get_db)):
-    response = get_poll(db)
+    response = get_poll(db, poll_id)
     return validate(response)
 
-@app.post("/polls/get/all", response_model=User)
+@app.post("/polls/get/all", response_model=List[Poll])
 async def get_all_polls(db: Session = Depends(get_db)):
     response = get_polls(db)
     return validate(response)
 
-@app.post("/polls/", response_model=User)
+@app.post("/polls/", response_model=List[Poll])
 async def yourmum(db: Session = Depends(get_db)):
     response = get_polls(db)
     return validate(response)
 
+@app.post("/polls/add_vote/{poll_id}/{choice_id}", response_model=Poll)
+def add_vote(poll_id: int, choice_id: int, db: Session = Depends(get_db)):
+    # check if user is in organisation. For later
+
+    response = add_poll_vote(db, poll_id, choice_id)
+    return validate(response)
+
+@app.post("/org/add/{user_id}", response_model=Organisation)
+def add_org(user_id: int, db: Session = Depends(get_db)):
+    pass
 
 """""""""
 @app.post("/users/", response_model=schemas.User)
