@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
 from sqlalchemy.orm import descriptor_props, relationship
-from database import Base
+from .database import Base
 
 # can you see this? yes
 # nice

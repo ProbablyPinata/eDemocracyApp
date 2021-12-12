@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import mode
-import models, schemas
+from . import models, schemas
 
 def serialize_user(user: schemas.UserCreate):
     db_user = models.User(**user.dict(exclude={'organisations'}), organisations=str(user.organisations))
