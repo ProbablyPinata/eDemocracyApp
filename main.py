@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from database import *
@@ -85,7 +87,7 @@ async def get_user_by_id(user_id, db: Session = Depends(get_db)):
     return validate(response)
 
 @app.get("/users/", response_model=List[User])
-async def get_all_users(db: Session  = Depends(get_db)):
+async def get_all_users(db: Session = Depends(get_db)):
     response = get_users(db)
     return validate(response)
 

@@ -5,8 +5,9 @@ name = "pypi"
 
 [packages]
 fastapi = "*"
-uvicorn = "*"
-motor = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+mysqlclient = "*"
+SQLAlchemy = "*"
 
 [dev-packages]
 
