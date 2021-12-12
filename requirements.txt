@@ -3,3 +3,4 @@ uvicorn[standard]
 sqlalchemy
 # logging==0.4.9.5 # does not work
 mysqlclient
+pytest
