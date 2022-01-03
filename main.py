@@ -72,16 +72,18 @@ async def delete_post(title):
 
 """
 # User management
-@app.get("/users/name/{user_id}", response_model=User)
-async def get_user_by_id(user_id):
-    response = get_user(db, user_id)
-    print(response)
-    return validate(response)
+@app.get("/users/{key}", response_model=User)
+async def get_user_by_key(key: str):
+    user = users.get(key)
+    return validate(user)
+   
+   
 
 @app.get("/users/", response_model=List[User])
 async def get_all_users():
-    response = get_users(db)
-    return validate(response)
+    response = users.fetch()
+    print(response.items)
+    return validate(response.items)
 
 @app.post("/users/add", response_model=User )
 async def new_user(user: UserCreate):
@@ -89,10 +91,11 @@ async def new_user(user: UserCreate):
     print(user)
     return user
 
-@app.delete("/users/delete/{user_id}")
-def app_delete_user(user_id: int):
-    if not delete_user(user_id, db):
-        raise HTTPException(400, "Unable to delete user")
+@app.delete("/users/delete/{key}")
+def app_delete_user(key: str):
+    users.delete(key)
+    return
+
 
 # Poll management
 """
