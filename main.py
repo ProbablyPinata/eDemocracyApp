@@ -83,10 +83,11 @@ async def get_all_users():
     response = get_users(db)
     return validate(response)
 
-@app.post("/users/add", response_model=User)
+@app.post("/users/add", response_model=User )
 async def new_user(user: UserCreate):
-    response = create_user(db, user)
-    return validate(response)
+    user = users.put(user.dict())
+    print(user)
+    return user
 
 @app.delete("/users/delete/{user_id}")
 def app_delete_user(user_id: int):

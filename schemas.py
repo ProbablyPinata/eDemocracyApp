@@ -12,10 +12,8 @@ class UserCreate(UserBase):
     pass
 
 class User(UserBase):
-    id: int
+    key: str
 
-    class Config:
-        orm_mode = True
 
 class Result(BaseModel):
     choice: int
@@ -40,10 +38,8 @@ class PollCreate(PollBase):
     pass
 
 class Poll(PollBase):
-    id: int
+    key:str 
 
-    class Config:
-        orm_mode = True
 
 
 class OrganisationBase(BaseModel):
@@ -55,7 +51,5 @@ class OrganisationCreate(OrganisationBase):
     pass
 
 class Organisation(OrganisationBase):
-    id: int
+    key:str
 
-    class Config:
-        orm_mode = True
