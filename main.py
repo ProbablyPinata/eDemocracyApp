@@ -1,14 +1,19 @@
 from typing import List
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from .database import *
-from .crud import *
-from .schemas import User, Poll, Organisation
-from sqlalchemy.orm import Session
+from deta import Deta
+from schemas import *
 app = FastAPI()
+deta = Deta("a0svha7u_zdyC9BJGJLCzv36DdG5Y2RtHPMKiwK2Y")
+
+users = deta.Base("users")
+polls = deta.Base("polls")
+organisations = deta.Base("organisations")
 
 
 origins = ['https://localhost:3000']
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,26 +23,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-models.Base.metadata.drop_all(engine)
-models.Base.metadata.create_all(bind=engine)
 
 def validate(response):
     if response:
         return response
     raise HTTPException(400, 'something went wrong.')
 
-"""
 @app.get("/")
 def read_root():
-    return {'Ping: Pong'}
-
+    return {'Ping': 'Pong'}
+"""
 
 @app.get("/api/post")
 async def get_post():
@@ -74,67 +69,65 @@ async def delete_post(title):
     if response:
         return 'success'
     raise HTTPException(404, f'there is no Post item with this (id) to delete')
-"""    
 
-
+"""
 # User management
 @app.get("/users/name/{user_id}", response_model=User)
-async def get_user_by_id(user_id, db: Session = Depends(get_db)):
+async def get_user_by_id(user_id):
     response = get_user(db, user_id)
     print(response)
     return validate(response)
 
 @app.get("/users/", response_model=List[User])
-async def get_all_users(db: Session = Depends(get_db)):
+async def get_all_users():
     response = get_users(db)
     return validate(response)
 
 @app.post("/users/add", response_model=User)
-async def new_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def new_user(user: UserCreate):
     response = create_user(db, user)
     return validate(response)
 
 @app.delete("/users/delete/{user_id}")
-def app_delete_user(user_id: int, db: Session = Depends(get_db)):
+def app_delete_user(user_id: int):
     if not delete_user(user_id, db):
         raise HTTPException(400, "Unable to delete user")
 
 # Poll management
-
+"""
 @app.post("/polls/add", response_model=Poll)
-async def new_poll(poll: schemas.PollCreate, db: Session = Depends(get_db)):
+async def new_poll(poll: schemas.PollCreate):
     response = create_poll(db, poll)
     return validate(response)
 
 @app.post("/poll/{poll_id}", response_model=Poll)
-async def get_poll_by_id(poll_id: int, db: Session = Depends(get_db)):
+async def get_poll_by_id(poll_id: int):
     response = get_poll(db, poll_id)
     return validate(response)
 
 @app.post("/polls/get/all", response_model=List[Poll])
-async def get_all_polls(db: Session = Depends(get_db)):
+async def get_all_polls():
     response = get_polls(db)
     return validate(response)
 
 @app.post("/polls/", response_model=List[Poll])
-async def yourmum(db: Session = Depends(get_db)):
+async def yourmum():
     response = get_polls(db)
     return validate(response)
 
 @app.post("/polls/add_vote/{poll_id}/{choice_id}", response_model=Poll)
-def add_vote(poll_id: int, choice_id: int, db: Session = Depends(get_db)):
+def add_vote(poll_id: int, choice_id: int):
     # check if user is in organisation. For later
 
     response = add_poll_vote(db, poll_id, choice_id)
     return validate(response)
 
 @app.post("/org/add/{user_id}", response_model=Organisation)
-def add_org(user_id: int, db: Session = Depends(get_db)):
+def add_org(user_id: int):
     pass
 
-"""""""""
 @app.post("/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(user: schemas.UserCreate):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -142,13 +135,13 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/users/", response_model=List[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_users(skip: int = 0, limit: int = 100):
     users = crud.get_users(db, skip=skip, limit=limit)
     return users
 
 
 @app.get("/users/{user_id}", response_model=schemas.User)
-def read_user(user_id: int, db: Session = Depends(get_db)):
+def read_user(user_id: int):
     db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -156,14 +149,12 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/users/{user_id}/items/", response_model=schemas.Item)
-def create_item_for_user(
-    user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
-):
+def create_item_for_user(user_id: int, item: schemas.ItemCreate):
     return crud.create_user_item(db=db, item=item, user_id=user_id)
 
 
 @app.get("/items/", response_model=List[schemas.Item])
-def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_items(skip: int = 0, limit: int = 100):
     items = crud.get_items(db, skip=skip, limit=limit)
     return items
 
