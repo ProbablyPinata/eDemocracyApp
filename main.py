@@ -1,10 +1,17 @@
+from re import L
 from typing import List
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from deta import Deta
 from schemas import *
+
+VER_MAJOR = 0
+VER_MINOR = 1
+VER_PATCH = 0
+
 app = FastAPI()
 deta = Deta("a0svha7u_zdyC9BJGJLCzv36DdG5Y2RtHPMKiwK2Y")
+
 
 users = deta.Base("users")
 polls = deta.Base("polls")
@@ -34,6 +41,28 @@ def validate(response):
 def read_root():
     return {'Ping': 'Pong'}
 
+@app.get("/admin/version")
+def version():
+    return {"Major": VER_MAJOR,
+            "Minor": VER_MINOR,
+            "Patch": VER_PATCH}
+
+def delete_all_fields(db):
+    res = db.fetch()
+    all_items = res.items
+    while res.last:
+        res = db.fetch(last=res.last)
+        all_items += res.items
+    
+    for item in all_items:
+        db.delete(item["key"])
+
+@app.get("/admin/delete_all")
+def delete_all():
+    delete_all_fields(users)
+    delete_all_fields(polls)
+    delete_all_fields(organisations)
+
 # User management
 @app.get("/users/{key}", response_model=User)
 def get_user_by_key(key: str):
@@ -60,18 +89,21 @@ def app_delete_user(key: str):
 @app.post("/polls/add", response_model=Poll)
 def new_poll(poll: PollCreate):
     org = poll.organisation_key
-    if organisations.find(org) is None:
+    if organisations.get(org) is None:
         raise HTTPException(404, "Unable to add poll")
+    if poll.results == []: # Results are not filled
+        for choice in poll.choices:
+            poll.results.append(Result(choice=choice.id, votes=0))
     poll = polls.put(poll.dict())
     print("Ok")
     return validate(poll)
 
-@app.post("/poll/{key}", response_model=Poll)
+@app.get("/poll/{key}", response_model=Poll)
 def get_poll_by_id(key: str):
     poll = polls.get(key)
     return validate(poll)
 
-@app.post("/polls/get/all", response_model=List[Poll])
+@app.get("/polls", response_model=List[Poll])
 def get_all_polls():
     response = polls.fetch()
     return validate(response.items)
@@ -103,7 +135,7 @@ def add_vote(key: str, choice_id: int):
 
 # Organisation management
 @app.get("/organisations/{key}", response_model=Organisation)
-def get_user_by_key(key: str):
+def get_organisation_by_key(key: str):
     org = organisations.get(key)
     return validate(org)
 
@@ -125,11 +157,15 @@ def app_delete_organisation(key: str):
             user["organisations"].remove(key)
     
     polls_to_delete = polls.fetch({"organisation_key": key})
-    for poll in polls_to_delete:
+    for poll in polls_to_delete.items:
         polls.delete(poll["key"])
     
     organisations.delete(key)
 
+@app.post('/organisations/add_admin/{org_key}/{admin_key}')
+def add_organisation_admin(org_key: str, admin_key: str):
+    organisations.update({"admins": organisations.util.append(admin_key)}, org_key)
+    return organisations.get(org_key)
 """
 @app.post("/org/add/{user_id}", response_model=Organisation)
 def add_org(user_id: int):

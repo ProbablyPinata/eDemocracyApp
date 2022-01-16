@@ -34,18 +34,18 @@ class PollBase(BaseModel):
     name: str
     description: str
     anonymous: bool
-    total_votes: int
     start_time: DateTime
     end_time: DateTime
     organisation_key: str
-    results: List[Result]
     choices: List[Choice]
+    results: List[Result]
 
 class PollCreate(PollBase):
     pass
 
 class Poll(PollBase):
-    key:str 
+    total_votes: int = 0
+    key:str
 
 
 
