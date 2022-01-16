@@ -13,7 +13,7 @@ class UserBase(BaseModel):
     name: str
     email: str
     pw: str
-    organisations: List[int]
+    organisations: List[str]
 
 class UserCreate(UserBase):
     pass
@@ -34,25 +34,25 @@ class PollBase(BaseModel):
     name: str
     description: str
     anonymous: bool
-    total_votes: int
     start_time: DateTime
     end_time: DateTime
-    organisation_id: int
-    results: List[Result]
+    organisation_key: str
     choices: List[Choice]
+    results: List[Result]
 
 class PollCreate(PollBase):
     pass
 
 class Poll(PollBase):
-    key:str 
+    total_votes: int = 0
+    key:str
 
 
 
 class OrganisationBase(BaseModel):
     name: str
     description: str
-    admins: List[int]
+    admins: List[str]
 
 class OrganisationCreate(OrganisationBase):
     pass
