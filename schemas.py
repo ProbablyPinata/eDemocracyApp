@@ -1,6 +1,13 @@
 from typing import List, Optional
 from pydantic import BaseModel
-import datetime
+
+
+class DateTime(BaseModel):
+    year: int
+    month: int
+    day: int
+    hours: int
+    minutes: int
 
 class UserBase(BaseModel):
     name: str
@@ -28,8 +35,8 @@ class PollBase(BaseModel):
     description: str
     anonymous: bool
     total_votes: int
-    start_time: datetime.datetime
-    end_time: datetime.datetime
+    start_time: DateTime
+    end_time: DateTime
     organisation_id: int
     results: List[Result]
     choices: List[Choice]
@@ -52,4 +59,3 @@ class OrganisationCreate(OrganisationBase):
 
 class Organisation(OrganisationBase):
     key:str
-

@@ -73,20 +73,17 @@ async def delete_post(title):
 """
 # User management
 @app.get("/users/{key}", response_model=User)
-async def get_user_by_key(key: str):
+def get_user_by_key(key: str):
     user = users.get(key)
     return validate(user)
-   
-   
 
 @app.get("/users/", response_model=List[User])
-async def get_all_users():
+def get_all_users():
     response = users.fetch()
-    print(response.items)
     return validate(response.items)
 
 @app.post("/users/add", response_model=User )
-async def new_user(user: UserCreate):
+def new_user(user: UserCreate):
     user = users.put(user.dict())
     print(user)
     return user
@@ -94,38 +91,51 @@ async def new_user(user: UserCreate):
 @app.delete("/users/delete/{key}")
 def app_delete_user(key: str):
     users.delete(key)
-    return
-
 
 # Poll management
-"""
-@app.post("/polls/add", response_model=Poll)
-async def new_poll(poll: schemas.PollCreate):
-    response = create_poll(db, poll)
-    return validate(response)
 
-@app.post("/poll/{poll_id}", response_model=Poll)
-async def get_poll_by_id(poll_id: int):
-    response = get_poll(db, poll_id)
-    return validate(response)
+@app.post("/polls/add", response_model=Poll)
+def new_poll(poll: PollCreate):
+    poll = polls.put(poll.dict())
+    print("Ok")
+    return validate(poll)
+
+@app.post("/poll/{key}", response_model=Poll)
+def get_poll_by_id(key: str):
+    poll = polls.get(key)
+    return validate(poll)
 
 @app.post("/polls/get/all", response_model=List[Poll])
-async def get_all_polls():
-    response = get_polls(db)
-    return validate(response)
+def get_all_polls():
+    response = polls.fetch()
+    return validate(response.items)
 
-@app.post("/polls/", response_model=List[Poll])
-async def yourmum():
-    response = get_polls(db)
-    return validate(response)
+@app.delete("/polls/delete/{key}")
+def delete_poll(key: str):
+    polls.delete(key)
 
-@app.post("/polls/add_vote/{poll_id}/{choice_id}", response_model=Poll)
-def add_vote(poll_id: int, choice_id: int):
-    # check if user is in organisation. For later
+@app.post("/polls/add_vote/{key}/{choice_id}", response_model=Poll)
+def add_vote(key: str, choice_id: int):
+    # check if user is in organisation. For later when we do oauth
+    poll = get_poll_by_id(key)
+    found = False
+    for choice in poll["choices"]:
+        if choice["id"] == choice_id:
+            found = True
+            break
+    if not found:
+        raise HTTPException(404, "Unable to add choice") # be ambiguous to avoid hackers
+    for result in poll["results"]:
+        if result["choice"] == choice_id:
+            result["votes"] += 1
+            break
+    updates = {"results": poll["results"]}
+    print(poll)
+    poll = polls.update(updates, key)
+    
+    return validate(polls.get(key))
 
-    response = add_poll_vote(db, poll_id, choice_id)
-    return validate(response)
-
+"""
 @app.post("/org/add/{user_id}", response_model=Organisation)
 def add_org(user_id: int):
     pass
