@@ -1,0 +1,15 @@
+TODO:
+- Send organisation admin email is can't join
+
+User:
+Organisations dependens on organisation.key
+- If adding a user, check if organisations exist
+- If deleting a user check if user is an admin
+- If deleting an organisation make sure the users have the organisation deleted too
+- If adding admins to an organisation check the users exist (and then send them an email)
+- If deleting an admin check the user exists
+
+Poll:
+organisation_key depends on organisation.key
+- If adding a poll ensure organisation exists
+- If deleting an organisation delete the poll

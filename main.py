@@ -15,6 +15,7 @@ origins = ['https://localhost:3000']
 
 
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -32,45 +33,7 @@ def validate(response):
 @app.get("/")
 def read_root():
     return {'Ping': 'Pong'}
-"""
 
-@app.get("/api/post")
-async def get_post():
-    response = await fetch_all()
-    return response
-
-@app.get("/api/post{title}", response_model=Post)
-async def get_post_by_id(title):
-    response = await fetch_post(title)
-    if response:
-        return response
-    raise HTTPException(404, f'there is no POST item with this (id)')
-
-
-@app.post("/api/post", response_model=Post)
-async def new_post(post: Post):
-    response = await create_post(post.dict())
-    if response:
-        return response
-    raise HTTPException(400, 'bad request')
-
-    
-
-@app.put("/api/post{title}", response_model=Post)
-async def put_post(title:str, description:str):
-    response = await update_post(title, description)
-    if response:
-        return response
-    raise HTTPException(404, f'there is no Post item with this (id)')
-
-@app.delete("/api/post{title}")
-async def delete_post(title):
-    response = await delete_post(title)
-    if response:
-        return 'success'
-    raise HTTPException(404, f'there is no Post item with this (id) to delete')
-
-"""
 # User management
 @app.get("/users/{key}", response_model=User)
 def get_user_by_key(key: str):
@@ -96,6 +59,9 @@ def app_delete_user(key: str):
 
 @app.post("/polls/add", response_model=Poll)
 def new_poll(poll: PollCreate):
+    org = poll.organisation_key
+    if organisations.find(org) is None:
+        raise HTTPException(404, "Unable to add poll")
     poll = polls.put(poll.dict())
     print("Ok")
     return validate(poll)
@@ -134,6 +100,35 @@ def add_vote(key: str, choice_id: int):
     poll = polls.update(updates, key)
     
     return validate(polls.get(key))
+
+# Organisation management
+@app.get("/organisations/{key}", response_model=Organisation)
+def get_user_by_key(key: str):
+    org = organisations.get(key)
+    return validate(org)
+
+@app.get("/organisations/", response_model=List[Organisation])
+def get_all_organisations():
+    response = organisations.fetch()
+    return validate(response.items)
+
+@app.post("/organisations/add", response_model=Organisation)
+def new_organisation(org: OrganisationCreate):
+    org = organisations.put(org.dict())
+    return org
+
+@app.delete("/organisations/delete/{key}")
+def app_delete_organisation(key: str):
+    # Should go through and remove all organisations from users
+    for user in get_all_users():
+        if key in user["organisations"]:
+            user["organisations"].remove(key)
+    
+    polls_to_delete = polls.fetch({"organisation_key": key})
+    for poll in polls_to_delete:
+        polls.delete(poll["key"])
+    
+    organisations.delete(key)
 
 """
 @app.post("/org/add/{user_id}", response_model=Organisation)
