@@ -7,7 +7,7 @@ from schemas import *
 
 VER_MAJOR = 0
 VER_MINOR = 1
-VER_PATCH = 0
+VER_PATCH = 1
 
 app = FastAPI()
 deta = Deta("a0svha7u_zdyC9BJGJLCzv36DdG5Y2RtHPMKiwK2Y")
@@ -18,7 +18,8 @@ polls = deta.Base("polls")
 organisations = deta.Base("organisations")
 
 
-origins = ['https://localhost:3000']
+#origins = ['https://localhost:3000', 'http://localhost:3000']
+origins = ['*']
 
 
 
