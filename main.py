@@ -103,8 +103,15 @@ def new_user(user: UserCreate):
     return user
 
 @app.delete("/users/delete/{key}")
-def app_delete_user(key: str):
+def delete_user(key: str):
     print(users.get(key))
+    user_organisations = organisations.fetch({"admins?contains": key})
+    print("user is in", user_organisations.items)
+    while user_organisations.last:
+        for organisation in user_organisations.items:
+            organisation["admins"].remove(key)
+            organisations.update(organisation, organisation["key"])
+        user_organisations = organisations.fetch(lest=user_organisations.last)
     users.delete(key)
 
 # Poll management

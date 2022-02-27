@@ -70,9 +70,10 @@ def test_organisations():
     response = client.get("/organisations/", auth=HTTPBasicAuth(username=username, password=password))
     assert org1 in response.json()
 
+    response = client.delete(f'/organisations/delete/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    
     client.delete(f'/users/delete/{user1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     client.delete(f'/users/delete/{user2["key"]}', auth=HTTPBasicAuth(username=username, password=password))
-    response = client.delete(f'/organisations/delete/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
 
 
@@ -127,5 +128,5 @@ def test_auth():
     response = client.get(f'/users/{key}',auth=HTTPBasicAuth(username=username, password="jdsajdi"))
     assert response.status_code == 401
     
-    client.delete(f'/users/delete/{key}',auth=HTTPBasicAuth(username=username, password=password))
+    response = client.delete(f'/users/delete/{key}',auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
