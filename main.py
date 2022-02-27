@@ -20,7 +20,7 @@ polls = deta.Base("polls")
 organisations = deta.Base("organisations")
 
 
-origins = ['http://localhost:8000', 'http://localhost']
+origins = ['http://localhost:8000', 'http://localhost:3000']
 
 
 
