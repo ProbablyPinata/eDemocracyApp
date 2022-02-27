@@ -12,7 +12,7 @@ class DateTime(BaseModel):
 class UserBase(BaseModel):
     name: str
     email: str
-    pw: str
+    password: str
     organisations: List[str]
 
 class UserCreate(UserBase):

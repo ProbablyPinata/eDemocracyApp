@@ -2,16 +2,18 @@ from re import L
 from typing import List
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import secrets
 from deta import Deta
 from schemas import *
 
 VER_MAJOR = 0
 VER_MINOR = 1
-VER_PATCH = 1
+VER_PATCH = "branch-basic-auth.1"
 
 app = FastAPI()
 deta = Deta("a0svha7u_zdyC9BJGJLCzv36DdG5Y2RtHPMKiwK2Y")
-
+security = HTTPBasic()
 
 users = deta.Base("users")
 polls = deta.Base("polls")
@@ -31,6 +33,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def creds_error():
+    raise HTTPException(
+            status_code=401,
+            detail="Incorrect credentials",
+            headers={"WWW-Authenticate": "Basic"}
+        )
+
+def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
+    user = users.fetch({"email": credentials.username})
+
+    if len(user.items) == 0:
+        creds_error()
+    user = user.items[0]
+    username_correct = secrets.compare_digest(credentials.username, user["email"])
+    password_correct = secrets.compare_digest(credentials.password, user["password"])
+    if not (username_correct and password_correct):
+        creds_error()
+    return credentials.username
 
 def validate(response):
     if response:
@@ -65,9 +85,11 @@ def delete_all():
 
 # User management
 @app.get("/users/{key}", response_model=User)
-def get_user_by_key(key: str):
-    user = users.get(key)
-    return validate(user)
+def get_user_by_key(email: str = Depends(authenticate)):
+    user = users.fetch({"email": email})
+    if len(user.items) == 0:
+        raise HTTPException(status_code=401, detail="User not found")
+    return validate(user.items[0])
 
 @app.get("/users/", response_model=List[User])
 def get_all_users():
@@ -82,6 +104,7 @@ def new_user(user: UserCreate):
 
 @app.delete("/users/delete/{key}")
 def app_delete_user(key: str):
+    print(users.get(key))
     users.delete(key)
 
 # Poll management
