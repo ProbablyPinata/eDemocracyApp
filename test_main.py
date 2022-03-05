@@ -96,7 +96,7 @@ def test_polls():
         start_time=DateTime(year=0, month=0, day=0, hours=0, minutes=0), \
             end_time=DateTime(year=0, month=0, day=0, hours=0, minutes=0)\
                 , organisation_key=org1["key"], \
-                    choices=[Choice(description="choice1", id=1)], results=[])
+                    choices=[Choice(description="choice1")], results=[])
     response = client.post("/polls/add", data=poll1.json(), auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
     poll1 = response.json()
@@ -118,6 +118,7 @@ def test_auth():
                        email=username,
                        password=password,
                        organisations=[])
+    
     response = client.post('/users/add', data=user1.json(), auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
     key = response.json()["key"]
@@ -128,5 +129,15 @@ def test_auth():
     response = client.get(f'/users/{key}',auth=HTTPBasicAuth(username=username, password="jdsajdi"))
     assert response.status_code == 401
     
+    
+    response = client.get(f'/users/',auth=HTTPBasicAuth(username="hashdio", password=password))
+    assert response.status_code == 401
+    
+    response = client.delete(f'/users/delete/{key}',auth=HTTPBasicAuth(username="ahui", password=password))
+    assert response.status_code == 401
+
+    # organisations
+    
     response = client.delete(f'/users/delete/{key}',auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
+    

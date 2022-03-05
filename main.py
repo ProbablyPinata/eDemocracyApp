@@ -50,7 +50,7 @@ def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
     password_correct = secrets.compare_digest(credentials.password, user["password"])
     if not (username_correct and password_correct):
         creds_error()
-    return credentials.username
+    return user
 
 def validate(response):
     if response:
@@ -78,21 +78,20 @@ def delete_all_fields(db):
         db.delete(item["key"])
 
 @app.get("/admin/delete_all")
-def delete_all():
+def delete_all(user: User = Depends(authenticate)):
+    if user.email != "admin":
+        creds_error()
     delete_all_fields(users)
     delete_all_fields(polls)
     delete_all_fields(organisations)
 
 # User management
 @app.get("/users/{key}", response_model=User)
-def get_user_by_key(email: str = Depends(authenticate)):
-    user = users.fetch({"email": email})
-    if len(user.items) == 0:
-        raise HTTPException(status_code=401, detail="User not found")
-    return validate(user.items[0])
+def get_user_by_key(key: str, user: User = Depends(authenticate)):
+    return validate(user)
 
 @app.get("/users/", response_model=List[User])
-def get_all_users():
+def get_all_users(user: User = Depends(authenticate)):
     response = users.fetch()
     return validate(response.items)
 
@@ -103,7 +102,9 @@ def new_user(user: UserCreate):
     return user
 
 @app.delete("/users/delete/{key}")
-def delete_user(key: str):
+def delete_user(key: str, user: User = Depends(authenticate)):
+    if user.key != key:
+        creds_error()
     print(users.get(key))
     user_organisations = organisations.fetch({"admins?contains": key})
     print("user is in", user_organisations.items)
@@ -115,37 +116,55 @@ def delete_user(key: str):
     users.delete(key)
 
 # Poll management
-
+# validate emails, store user votes 
 @app.post("/polls/add", response_model=Poll)
-def new_poll(poll: PollCreate):
+def new_poll(poll: PollCreate, user: User = Depends(authenticate)):
     org = poll.organisation_key
     if organisations.get(org) is None:
         raise HTTPException(404, "Unable to add poll")
+    
+    new_poll = Poll(**poll)
+    nextID = 1 #
+    
+    # fill in choices and results array for new_poll using poll.choices
     if poll.results == []: # Results are not filled
         for choice in poll.choices:
-            poll.results.append(Result(choice=choice.id, votes=0))
-    poll = polls.put(poll.dict())
+            # poll.results.append(Result(choice=choice.id, votes=0))
+            new_poll.results.append(Result(choice=nextID, votes=0)) #
+            nextID += 1 #
+    poll = polls.put(new_poll.dict())
     print("Ok")
-    return validate(poll)
+    return validate(new_poll)
 
 @app.get("/poll/{key}", response_model=Poll)
-def get_poll_by_id(key: str):
+def get_poll_by_id(key: str, user: User = Depends(authenticate)):
+
     poll = polls.get(key)
+    if poll.organisation_key not in user.organisations:
+        creds_error()
     return validate(poll)
 
-@app.get("/polls", response_model=List[Poll])
-def get_all_polls():
+@app.get("/polls/{organisation}", response_model=List[Poll])
+def get_all_polls(organisation: str, user: User = Depends(authenticate)):
+
     response = polls.fetch()
     return validate(response.items)
 
 @app.delete("/polls/delete/{key}")
-def delete_poll(key: str):
+def delete_poll(key: str, user: User = Depends(authenticate)):
+    poll = get_poll_by_id(key, user)
+    organisation = get_organisation_by_key(poll.organisation_key)
+    if user.key not in organisation.admins:
+        creds_error()
     polls.delete(key)
 
 @app.post("/polls/add_vote/{key}/{choice_id}", response_model=Poll)
-def add_vote(key: str, choice_id: int):
+def add_vote(key: str, choice_id: int, user: User = Depends(authenticate)):
     # check if user is in organisation. For later when we do oauth
+    
     poll = get_poll_by_id(key)
+    if poll.organisation_key not in user.organisations:
+        creds_error()
     found = False
     for choice in poll["choices"]:
         if choice["id"] == choice_id:
@@ -165,23 +184,28 @@ def add_vote(key: str, choice_id: int):
 
 # Organisation management
 @app.get("/organisations/{key}", response_model=Organisation)
-def get_organisation_by_key(key: str):
+def get_organisation_by_key(key: str, user: User = Depends(authenticate)):
+    # TODO: have organisations which you can/can't join
     org = organisations.get(key)
     return validate(org)
 
 @app.get("/organisations/", response_model=List[Organisation])
-def get_all_organisations():
+def get_all_organisations(user: User = Depends(authenticate)):
     response = organisations.fetch()
     return validate(response.items)
 
 @app.post("/organisations/add", response_model=Organisation)
-def new_organisation(org: OrganisationCreate):
+def new_organisation(org: OrganisationCreate, user: User = Depends(authenticate)):
     org = organisations.put(org.dict())
     return org
 
 @app.delete("/organisations/delete/{key}")
-def app_delete_organisation(key: str):
+def app_delete_organisation(key: str, user: User = Depends(authenticate)):
     # Should go through and remove all organisations from users
+    organisation = get_organisation_by_key(key)
+    if user.key not in organisation.admins:
+        creds_error()
+
     for user in get_all_users():
         if key in user["organisations"]:
             user["organisations"].remove(key)
@@ -193,7 +217,8 @@ def app_delete_organisation(key: str):
     organisations.delete(key)
 
 @app.post('/organisations/add_admin/{org_key}/{admin_key}')
-def add_organisation_admin(org_key: str, admin_key: str):
+def add_organisation_admin(org_key: str, admin_key: str, user: User = Depends(authenticate)):
+    # TODO: send an email to existing admins
     organisations.update({"admins": organisations.util.append(admin_key)}, org_key)
     return organisations.get(org_key)
 """

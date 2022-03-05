@@ -25,10 +25,11 @@ class User(UserBase):
 class Result(BaseModel):
     choice: int
     votes: int
+    who_voted: str # who voted (key)
 
 class Choice(BaseModel):
     description: str
-    id: int
+    # id: int   (no longer needs to be generated in the frontend)
 
 class PollBase(BaseModel):
     name: str
@@ -37,15 +38,17 @@ class PollBase(BaseModel):
     start_time: DateTime
     end_time: DateTime
     organisation_key: str
-    choices: List[Choice]
-    results: List[Result]
 
 class PollCreate(PollBase):
+    choices: List[str]
     pass
 
 class Poll(PollBase):
+    choices: List[Choice]
+    results: List[Result]
     total_votes: int = 0
     key:str
+    organisation_name: str
 
 
 
