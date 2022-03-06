@@ -1,4 +1,3 @@
-from __future__ import annotations
 import main
 from fastapi.testclient import TestClient
 from requests.auth import HTTPBasicAuth
@@ -14,7 +13,7 @@ def test_sanity():
 username = "test"
 password = "test_password"
 
-res = client.get("/admin/delete_all")
+res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
 assert res.status_code == 200
 
 
@@ -92,28 +91,35 @@ def test_polls():
     org1 = response.json()
     assert response.status_code == 200
 
+    response = client.post(f'/users/add_organisation/{user1["key"]}/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    assert response.status_code == 200
+    user1 = response.json()
     poll1 = PollCreate(name="test", description="poll", anonymous=False, \
         start_time=DateTime(year=0, month=0, day=0, hours=0, minutes=0), \
             end_time=DateTime(year=0, month=0, day=0, hours=0, minutes=0)\
                 , organisation_key=org1["key"], \
-                    choices=[Choice(description="choice1")], results=[])
+                    choices=["choice1"])
     response = client.post("/polls/add", data=poll1.json(), auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
-    poll1 = response.json()
 
+    poll1 = response.json()
+    
     response = client.get(f'/poll/{poll1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     assert response.json() == poll1
 
-    response = client.get("/polls", auth=HTTPBasicAuth(username=username, password=password))
-    assert poll1 in response.json()
-
+    
     response = client.post(f'/polls/add_vote/{poll1["key"]}/{1}', auth=HTTPBasicAuth(username=username, password=password))
+    print(response.json())
     assert response.json()['results'][0]["votes"] == 1
+    assert response.json()['results'][0]["who_voted"] == user1["key"]
 
-    client.delete(f'/polls/delete/{poll1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    response = client.delete(f'/polls/delete/{poll1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    assert response.status_code == 200
 
 def test_auth():
-    
+    res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
+    assert res.status_code == 200
+
     user1 = UserCreate(name="test1",
                        email=username,
                        password=password,
