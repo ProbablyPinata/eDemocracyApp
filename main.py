@@ -221,6 +221,15 @@ def add_organisation_admin(org_key: str, admin_key: str, user: User = Depends(au
     # TODO: send an email to existing admins
     organisations.update({"admins": organisations.util.append(admin_key)}, org_key)
     return organisations.get(org_key)
+
+@app.get('/organisations/search_orgs/{org_string}')
+def search_organisations(org_string: str, user: User = Depends(authenticate)):
+    orgs = organisations.fetch()._items
+    orgs = [org['name'] for org in orgs if org_string.lower() in org['name'].lower()]
+    if len(orgs) > 20:
+        orgs = orgs[:19]
+    return orgs
+
 """
 @app.post("/org/add/{user_id}", response_model=Organisation)
 def add_org(user_id: int):
