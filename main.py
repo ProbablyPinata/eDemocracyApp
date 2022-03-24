@@ -1,11 +1,13 @@
 from re import L
 from typing import List
+from urllib import response
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import secrets
 from deta import Deta
 from schemas import *
+import urllib.parse
 
 VER_MAJOR = 0
 VER_MINOR = 1
@@ -182,6 +184,15 @@ def add_vote(key: str, choice_id: int, user: User = Depends(authenticate)):
     
     return validate(polls.get(key))
 
+@app.get("/polls/search_polls/{organisation}/{poll_string}", response_model=List[Poll]) # needs testing, once we are able to add polls again
+def search_polls(organisation: str, poll_string: str, user: User = Depends(authenticate)):
+    poll_string = urllib.parse.unquote(poll_string)
+    polls = polls.fetch()._items
+    polls = [poll for poll in polls if (poll_string.lower() in poll['name'].lower() and organisation == poll['organisation_key'])]
+    if len(polls) > 20:
+        polls = polls[:19]
+    return polls
+
 # Organisation management
 @app.get("/organisations/{key}", response_model=Organisation)
 def get_organisation_by_key(key: str, user: User = Depends(authenticate)):
@@ -196,6 +207,10 @@ def get_all_organisations(user: User = Depends(authenticate)):
 
 @app.post("/organisations/add", response_model=Organisation)
 def new_organisation(org: OrganisationCreate, user: User = Depends(authenticate)):
+    orgs = organisations.fetch()._items
+    orgs = [org['name'] for org in orgs]
+    if org.dict()['name'] in orgs:
+        raise HTTPException(status_code=400, detail='Organisation already registered.')
     org = organisations.put(org.dict())
     return org
 
@@ -224,8 +239,9 @@ def add_organisation_admin(org_key: str, admin_key: str, user: User = Depends(au
 
 @app.get('/organisations/search_orgs/{org_string}')
 def search_organisations(org_string: str):
+    org_string = urllib.parse.unquote(org_string)
     orgs = organisations.fetch()._items
-    orgs = [org['name'] for org in orgs if org_string.lower() in org['name'].lower()]
+    orgs = [{'name': org['name'], 'key': org['key']} for org in orgs if org_string.lower() in org['name'].lower()]
     if len(orgs) > 20:
         orgs = orgs[:19]
     return orgs
