@@ -223,7 +223,7 @@ def add_organisation_admin(org_key: str, admin_key: str, user: User = Depends(au
     return organisations.get(org_key)
 
 @app.get('/organisations/search_orgs/{org_string}')
-def search_organisations(org_string: str, user: User = Depends(authenticate)):
+def search_organisations(org_string: str):
     orgs = organisations.fetch()._items
     orgs = [org['name'] for org in orgs if org_string.lower() in org['name'].lower()]
     if len(orgs) > 20:
