@@ -24,6 +24,8 @@ assert res.json() == {"Major": main.VER_MAJOR, "Minor": main.VER_MINOR, "Patch":
 
 
 def test_users():
+    res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
+    assert res.status_code == 200
     user1 = UserCreate(name="test1",
                        email=username,
                        password=password,
@@ -44,6 +46,8 @@ def test_users():
 
 
 def test_organisations():
+    res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
+    assert res.status_code == 200
     user1 = UserCreate(name="test1",
                        email=username,
                        password=password,
@@ -56,13 +60,21 @@ def test_organisations():
     response = client.post("/organisations/add", data=org1.json(), auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
     org1 = response.json()
-
+    print(org1)
     user2 = UserCreate(name="test2",
                        email="test2",
                        password="test_password",
                        organisations=[])
+
+    
+    user3 = UserCreate(name="test3",
+                       email="test3",
+                       password="test_password",
+                       organisations=[org1["key"]])
     response = client.post('/users/add', data=user2.json(), auth=HTTPBasicAuth(username=username, password=password))
     user2 = response.json()
+    response = client.post('/users/add', data=user3.json(), auth=HTTPBasicAuth(username=username, password=password))
+    user3 = response.json()
 
     response = client.post(
         f'/organisations/add_admin/{org1["key"]}/{user2["key"]}', auth=HTTPBasicAuth(username=username, password=password))
@@ -75,22 +87,25 @@ def test_organisations():
     response = client.get("/organisations/", auth=HTTPBasicAuth(username=username, password=password))
     assert org1 in response.json()
 
-    client.delete(f'/users/delete/{user2["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    response = client.delete(f'/users/delete/{user2["key"]}', auth=HTTPBasicAuth(username="test2", password="test_password"))
     assert response.status_code == 200
 
-    
     response = client.get(f'/organisations/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     assert user2["key"] not in response.json()["admins"]
 
+    response = client.delete(f'/organisations/delete/{org1["key"]}', auth=HTTPBasicAuth(username="test3", password="test_password"))
+    assert response.status_code == 401
     response = client.delete(f'/organisations/delete/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     
-    client.delete(f'/users/delete/{user1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    response = client.delete(f'/users/delete/{user1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     
     assert response.status_code == 200
 
 
 def test_polls():
 
+    res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
+    assert res.status_code == 200
     user1 = UserCreate(name="test1",
                        email=username,
                        password=password,
@@ -106,7 +121,11 @@ def test_polls():
 
     response = client.post(f'/users/add_organisation/{user1["key"]}/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     assert response.status_code == 200
+    
     user1 = response.json()
+    assert org1["key"] in user1["organisations"]
+    
+    assert org1["key"] in user1["organisations"]
     poll1 = PollCreate(name="test", description="poll", anonymous=False, \
         start_time=DateTime(year=0, month=0, day=0, hours=0, minutes=0), \
             end_time=DateTime(year=0, month=0, day=0, hours=0, minutes=0)\
@@ -120,9 +139,14 @@ def test_polls():
     response = client.get(f'/poll/{poll1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     assert response.json() == poll1
 
+    response = client.get(f'/polls/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    assert poll1 in response.json()
+
+
+
     
     response = client.post(f'/polls/add_vote/{poll1["key"]}/{1}', auth=HTTPBasicAuth(username=username, password=password))
-    print(response.json())
+    print("add_vote", response.json())
     assert response.json()['results'][0]["votes"] == 1
     assert response.json()['results'][0]["who_voted"] == user1["key"]
 
@@ -130,6 +154,8 @@ def test_polls():
     assert response.status_code == 200
 
 def test_auth():
+    res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
+    assert res.status_code == 200
     res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
     assert res.status_code == 200
 
@@ -161,6 +187,8 @@ def test_auth():
     assert response.status_code == 200
     
 def test_security():
+    res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
+    assert res.status_code == 200
     
     user1 = UserCreate(name="test1",
                        email=username,

@@ -6,7 +6,11 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import secrets
 from deta import Deta
 from schemas import *
+
+import logging
+
 import urllib.parse
+
 
 VER_MAJOR = 0
 VER_MINOR = 1
@@ -21,6 +25,7 @@ ADMIN_PASSWORD = "shdfhiuws"
 app = FastAPI()
 deta = Deta("a0svha7u_zdyC9BJGJLCzv36DdG5Y2RtHPMKiwK2Y")
 security = HTTPBasic()
+logger = logging.getLogger(__name__)
 
 users = deta.Base("users")
 polls = deta.Base("polls")
@@ -118,17 +123,16 @@ def delete_user(key: str, user: User = Depends(authenticate)):
     if user.key != key:
         creds_error()
     print(users.get(key))
-    res = organisations.fetch({"admins?contains": key})
-    user_organisations = res.items
-    while res.last:
-        res = organisations.fetch(lest=res.last)
-        user_organisations += res.items
-    print("User is in", user_organisations)
-    for organisation in user_organisations:
-        organisation["admins"].remove(key)
-        print("New organisation:", organisation)
-        organisations.update({"admins", organisation["admins"]}, organisation["key"])
-        print("Now we have:", organisations.get(organisation["key"]))
+    logger.warning(user.organisations)
+    for org_key in user.organisations:
+        logger.error(f"THE FUCKING KEY: {org_key}")
+        organisation = organisations.get(org_key)
+        if organisation is None:
+            logger.error("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        if user.key in organisation["admins"]:
+            organisation["admins"].remove(user.key)
+            organisations.update({"admins": organisation["admins"]}, org_key)
+            logger.warning(f"Now we have: {str(organisations.get(org_key))}")
     users.delete(key)
 
 @app.post('/users/add_organisation/{user_key}/{org_key}')
@@ -174,9 +178,9 @@ def get_poll_by_id(key: str, user: User = Depends(authenticate)):
 
 @app.get("/polls/{organisation}", response_model=List[Poll])
 def get_all_polls(organisation: str, user: User = Depends(authenticate)):
-
-    response = polls.fetch()
-    return validate(response.items)
+    # TODO: Checking that polls for the organisation only are returned
+    res = polls.fetch()
+    return validate(res.items)
 
 @app.delete("/polls/delete/{key}")
 def delete_poll(key: str, user: User = Depends(authenticate)):
@@ -204,8 +208,9 @@ def add_vote(key: str, choice_id: int, user: User = Depends(authenticate)):
         if result["choice"] == choice_id:
             result["votes"] += 1
             result["who_voted"] = user.key
+
             break
-    updates = {"results": poll["results"]}
+    updates = {"results": poll["results"], "total_votes": polls.util.increment()}
     print(poll)
     poll = polls.update(updates, key)
     print(polls.get(key))
@@ -253,6 +258,7 @@ def app_delete_organisation(key: str, user: User = Depends(authenticate)):
     for user in get_all_users():
         if key in user["organisations"]:
             user["organisations"].remove(key)
+            users.update({"organisations": user["organisations"]}, user["key"])
     
     polls_to_delete = polls.fetch({"organisation_key": key})
     for poll in polls_to_delete.items:
@@ -267,6 +273,7 @@ def add_organisation_admin(org_key: str, admin_key: str, user: User = Depends(au
     users.update({"organisations": users.util.append(org_key)}, admin_key)
     return organisations.get(org_key)
 
+
 @app.get('/organisations/search_orgs/{org_string}')
 def search_organisations(org_string: str):
     org_string = urllib.parse.unquote(org_string)
@@ -276,57 +283,3 @@ def search_organisations(org_string: str):
         orgs = orgs[:19]
     return orgs
 
-"""
-@app.post("/org/add/{user_id}", response_model=Organisation)
-def add_org(user_id: int):
-    pass
-
-@app.post("/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate):
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    return crud.create_user(db=db, user=user)
-
-
-@app.get("/users/", response_model=List[schemas.User])
-def read_users(skip: int = 0, limit: int = 100):
-    users = crud.get_users(db, skip=skip, limit=limit)
-    return users
-
-
-@app.get("/users/{user_id}", response_model=schemas.User)
-def read_user(user_id: int):
-    db_user = crud.get_user(db, user_id=user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user
-
-
-@app.post("/users/{user_id}/items/", response_model=schemas.Item)
-def create_item_for_user(user_id: int, item: schemas.ItemCreate):
-    return crud.create_user_item(db=db, item=item, user_id=user_id)
-
-
-@app.get("/items/", response_model=List[schemas.Item])
-def read_items(skip: int = 0, limit: int = 100):
-    items = crud.get_items(db, skip=skip, limit=limit)
-    return items
-
-@app.delete("/users/delete/{id}/")
-async def delete_user(id):
-    return True
-
-
-@app.put("/users/email/{new_email}/")
-async def update_user_email(id, new_email):
-    return True
-
-@app.put("/users/name/{new_name}/")
-async def update_user_name(id, new_name):
-    return True
-
-@app.put("/users/name/{new_password}/")
-async def update_user_password(id, new_password):
-    return True
-"""
