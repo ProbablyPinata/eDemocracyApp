@@ -116,13 +116,17 @@ def delete_user(key: str, user: User = Depends(authenticate)):
     if user.key != key:
         creds_error()
     print(users.get(key))
-    user_organisations = organisations.fetch({"admins?contains": key})
-    print("user is in", user_organisations.items)
-    while user_organisations.last:
-        for organisation in user_organisations.items:
-            organisation["admins"].remove(key)
-            organisations.update(organisation, organisation["key"])
-        user_organisations = organisations.fetch(lest=user_organisations.last)
+    res = organisations.fetch({"admins?contains": key})
+    user_organisations = res.items
+    while res.last:
+        res = organisations.fetch(lest=res.last)
+        user_organisations += res.items
+    print("User is in", user_organisations)
+    for organisation in user_organisations:
+        organisation["admins"].remove(key)
+        print("New organisation:", organisation)
+        organisations.update({"admins", organisation["admins"]}, organisation["key"])
+        print("Now we have:", organisations.get(organisation["key"]))
     users.delete(key)
 
 @app.post('/users/add_organisation/{user_key}/{org_key}')
@@ -220,6 +224,8 @@ def get_all_organisations(user: User = Depends(authenticate)):
 @app.post("/organisations/add", response_model=Organisation)
 def new_organisation(org: OrganisationCreate, user: User = Depends(authenticate)):
     org = organisations.put(org.dict())
+    for admin in org["admins"]:
+        users.update({"organisations": users.util.append(org["key"])}, admin)
     return org
 
 @app.delete("/organisations/delete/{key}")
@@ -243,6 +249,7 @@ def app_delete_organisation(key: str, user: User = Depends(authenticate)):
 def add_organisation_admin(org_key: str, admin_key: str, user: User = Depends(authenticate)):
     # TODO: send an email to existing admins
     organisations.update({"admins": organisations.util.append(admin_key)}, org_key)
+    users.update({"organisations": users.util.append(org_key)}, admin_key)
     return organisations.get(org_key)
 """
 @app.post("/org/add/{user_id}", response_model=Organisation)

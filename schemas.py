@@ -35,8 +35,8 @@ class PollBase(BaseModel):
     name: str
     description: str
     anonymous: bool
-    start_time: DateTime
-    end_time: DateTime
+    start_time: DateTime # epoch time
+    end_time: DateTime # epoch time
     organisation_key: str
 
 class PollCreate(PollBase):

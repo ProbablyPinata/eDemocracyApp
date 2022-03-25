@@ -13,8 +13,14 @@ def test_sanity():
 username = "test"
 password = "test_password"
 
+username2 = "test2"
+password2 = "pw2"
+
 res = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=main.ADMIN_EMAIL, password=main.ADMIN_PASSWORD))
 assert res.status_code == 200
+
+res = client.get("/admin/version")
+assert res.json() == {"Major": main.VER_MAJOR, "Minor": main.VER_MINOR, "Patch": main.VER_PATCH} 
 
 
 def test_users():
@@ -69,10 +75,17 @@ def test_organisations():
     response = client.get("/organisations/", auth=HTTPBasicAuth(username=username, password=password))
     assert org1 in response.json()
 
+    client.delete(f'/users/delete/{user2["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    assert response.status_code == 200
+
+    
+    response = client.get(f'/organisations/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    assert user2["key"] not in response.json()["admins"]
+
     response = client.delete(f'/organisations/delete/{org1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
     
     client.delete(f'/users/delete/{user1["key"]}', auth=HTTPBasicAuth(username=username, password=password))
-    client.delete(f'/users/delete/{user2["key"]}', auth=HTTPBasicAuth(username=username, password=password))
+    
     assert response.status_code == 200
 
 
@@ -145,5 +158,35 @@ def test_auth():
     # organisations
     
     response = client.delete(f'/users/delete/{key}',auth=HTTPBasicAuth(username=username, password=password))
+    assert response.status_code == 200
+    
+def test_security():
+    
+    user1 = UserCreate(name="test1",
+                       email=username,
+                       password=password,
+                       organisations=[])
+
+    
+    user2 = UserCreate(name="test2",
+                       email=username2,
+                       password=password2,
+                       organisations=[])
+    
+    response = client.post('/users/add', data=user1.json(), auth=HTTPBasicAuth(username=username, password=password))
+    assert response.status_code == 200
+    key= response.json()["key"]
+
+    response = client.post('/users/add', data=user2.json(), auth=HTTPBasicAuth(username=username2, password=password2))
+    assert response.status_code == 200
+    
+    response = client.delete(f'/users/delete/{key}',auth=HTTPBasicAuth(username=username2, password=password2))
+    assert response.status_code == 401
+
+
+    response = client.get("/admin/delete_all", auth=HTTPBasicAuth(username=username, password=password))
+    assert response.status_code == 401
+
+    response = client.get("/admin/delete_all", auth=HTTPBasicAuth(username="admin", password="shdfhiuws"))
     assert response.status_code == 200
     
