@@ -214,11 +214,11 @@ def add_vote(key: str, choice_id: int, user: User = Depends(authenticate)):
 @app.get("/polls/search_polls/{organisation}/{poll_string}", response_model=List[Poll]) # needs testing, once we are able to add polls again
 def search_polls(organisation: str, poll_string: str, user: User = Depends(authenticate)):
     poll_string = urllib.parse.unquote(poll_string)
-    polls = polls.fetch()._items
-    polls = [poll for poll in polls if (poll_string.lower() in poll['name'].lower() and organisation == poll['organisation_key'])]
-    if len(polls) > 20:
-        polls = polls[:19]
-    return polls
+    pollList = polls.fetch()._items
+    pollList = [poll for poll in pollList if (poll_string.lower() in poll['name'].lower() and organisation == poll['organisation_key'])]
+    if len(pollList) > 20:
+        pollList = pollList[:19]
+    return validate(pollList)
 
 # Organisation management
 @app.get("/organisations/{key}", response_model=Organisation)
