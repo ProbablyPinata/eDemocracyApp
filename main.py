@@ -81,7 +81,7 @@ def delete_all_fields(db):
 
 @app.get("/admin/delete_all")
 def delete_all(user: User = Depends(authenticate)):
-    if user.email != "admin":
+    if user['email'] != "admin":
         creds_error()
     delete_all_fields(users)
     delete_all_fields(polls)
