@@ -149,6 +149,9 @@ def new_poll(poll: PollCreate, user: User = Depends(authenticate)):
     organisation = organisations.get(org)
     if organisation is None:
         raise HTTPException(404, "Unable to add poll")
+    # only members of organisations can create polls in that organisation
+    if org not in user.organisations:
+        creds_error()
     
     print(poll.dict())
     new_poll = poll.dict()
@@ -172,15 +175,20 @@ def get_poll_by_id(key: str, user: User = Depends(authenticate)):
 
     poll = polls.get(key)
     # Can we return any poll regardless of whether or not the user is in that poll?
-    #if poll["organisation_key"] not in user.organisations:
-    #    creds_error()
+    # SAM - no, i think it should be private to the organisation
+    if poll["organisation_key"] not in user.organisations:
+       creds_error()
     return validate(poll)
 
 @app.get("/polls/{organisation}", response_model=List[Poll])
 def get_all_polls(organisation: str, user: User = Depends(authenticate)):
-    # TODO: Checking that polls for the organisation only are returned
-    res = polls.fetch()
-    return validate(res.items)
+    # TODO: Checking that polls for the organisation only are returned - DONE ☑️ (SAM)
+    pollList = polls.fetch()._items
+    pollList = [poll for poll in pollList if (organisation == poll['organisation_key'])]
+    # 20 poll limit
+    if len(pollList) > 20:
+        pollList = pollList[:19]
+    return validate(pollList)
 
 @app.delete("/polls/delete/{key}")
 def delete_poll(key: str, user: User = Depends(authenticate)):
@@ -216,11 +224,14 @@ def add_vote(key: str, choice_id: int, user: User = Depends(authenticate)):
     print(polls.get(key))
     return validate(polls.get(key))
 
-@app.get("/polls/search_polls/{organisation}/{poll_string}", response_model=List[Poll]) # needs testing, once we are able to add polls again
+@app.get("/polls/search_polls/{organisation}/{poll_string}", response_model=List[Poll])
 def search_polls(organisation: str, poll_string: str, user: User = Depends(authenticate)):
+    if organisation not in user.organisations:
+        creds_error()
     poll_string = urllib.parse.unquote(poll_string)
     pollList = polls.fetch()._items
     pollList = [poll for poll in pollList if (poll_string.lower() in poll['name'].lower() and organisation == poll['organisation_key'])]
+    # 20 poll limit
     if len(pollList) > 20:
         pollList = pollList[:19]
     return validate(pollList)
