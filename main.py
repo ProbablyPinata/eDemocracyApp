@@ -163,7 +163,7 @@ def new_poll(poll: PollCreate, user: User = Depends(authenticate)):
     for choice in poll.choices:
         # poll.results.append(Result(choice=choice.id, votes=0))
         new_choices.append(Choice(description=choice, id=nextID).dict())
-        new_poll["results"].append(Result(choice=nextID, votes=0).dict()) #
+        new_poll["results"].append(Result(choice=nextID, votes=0, who_voted=['#NOBODY']).dict()) #who_voted is given a nobody element which is removed when a vote is recieved. Used to prevent an error when updating polls with votes - SAM
         nextID += 1 #
     new_poll["choices"] = new_choices
     poll = polls.insert(new_poll)
@@ -202,7 +202,7 @@ def delete_poll(key: str, user: User = Depends(authenticate)):
 def add_vote(key: str, choice_id: int, user: User = Depends(authenticate)):
     # check if user is in organisation. For later when we do oauth
     
-    poll = get_poll_by_id(key)
+    poll = get_poll_by_id(key, user)
     if poll["organisation_key"] not in user.organisations:
         creds_error()
     found = False
@@ -215,8 +215,8 @@ def add_vote(key: str, choice_id: int, user: User = Depends(authenticate)):
     for result in poll["results"]:
         if result["choice"] == choice_id:
             result["votes"] += 1
-            result["who_voted"] = user.key
-
+            if 'NOBODY' in result["who_voted"]: result['who_voted'] = []
+            result["who_voted"].append(user.key)           
             break
     updates = {"results": poll["results"], "total_votes": polls.util.increment()}
     print(poll)

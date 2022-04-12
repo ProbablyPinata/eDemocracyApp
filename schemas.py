@@ -25,7 +25,7 @@ class User(UserBase):
 class Result(BaseModel):
     choice: int
     votes: int
-    who_voted: str = "" # who voted (key)
+    who_voted: List[str] # who voted (key) #SAM - changed this from a string to a list
 
 class Choice(BaseModel):
     description: str
