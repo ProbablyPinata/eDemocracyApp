@@ -170,7 +170,7 @@ def new_poll(poll: PollCreate, user: User = Depends(authenticate)):
 
     return validate(poll)
 
-@app.get("/poll/{key}", response_model=Poll)
+@app.get("/poll/{key}", response_model=PollView)
 def get_poll_by_id(key: str, user: User = Depends(authenticate)):
 
     poll = polls.get(key)
@@ -178,6 +178,17 @@ def get_poll_by_id(key: str, user: User = Depends(authenticate)):
     # SAM - no, i think it should be private to the organisation
     if poll["organisation_key"] not in user.organisations:
        creds_error()
+    return validate(poll)
+
+@app.get("/poll/view_results/{key}", response_model=Poll)
+def get_poll_by_id(key: str, user: User = Depends(authenticate)):
+
+    poll = polls.get(key)
+    org = organisations.get(poll['organisation_key'])
+    if poll["organisation_key"] not in user.organisations:
+        creds_error()
+    elif user.key not in org['admins']: #check if the user is the admin of the organisation
+        creds_error()
     return validate(poll)
 
 @app.get("/polls/{organisation}", response_model=List[Poll])

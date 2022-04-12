@@ -50,7 +50,9 @@ class Poll(PollBase):
     key:str = ""
     organisation_name: str = ""
 
-
+class PollView(PollBase):
+    choices: List[Choice] =[]
+    organisation_name: str = ""
 
 class OrganisationBase(BaseModel):
     name: str
